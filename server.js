@@ -258,9 +258,12 @@ app.post('/api/upload-receipt', upload.single('file'), (req, res) => {
     chatHistory[userId].push(receiptMessage);
 
     // Envia para admins via Socket.IO
+    const adminRooms = io.of('/').adapter.rooms.get('admins');
+    const adminCount = adminRooms ? adminRooms.size : 0;
     io.to('admins').emit('new_message_for_admin', receiptMessage);
 
-    console.log(`Comprovante recebido de ${userId}: ${originalName} (${size} bytes)`);
+    console.log(`Comprovante recebido de ${userId}: ${originalName} (${size} bytes) | Admins conectados: ${adminCount}`);
+    console.log('Mensagem emitida para admins:', JSON.stringify(receiptMessage));
 
     return res.json({
       success: true,
@@ -468,12 +471,14 @@ io.on('connection', socket => {
   });
 
   socket.on('send_message', data => {
-    const { userId, text, sender, isAuto } = data;
+    const { userId, text, sender, isAuto, attachment } = data;
     const message = { userId, text, sender, timestamp: new Date().toISOString() };
+    // Passa attachment se existir
+    if (attachment) message.attachment = attachment;
     if (!chatHistory[userId]) chatHistory[userId] = [];
     chatHistory[userId].push(message);
 
-    console.log(`Mensagem de ${sender} (${userId}): ${text}`);
+    console.log(`Mensagem de ${sender} (${userId}): ${text}${attachment ? ' (com anexo)' : ''}`);
     
     // Se for mensagem automática (do agente), envia apenas para admins
     // Se for mensagem do usuário, envia para admins
