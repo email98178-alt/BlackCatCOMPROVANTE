@@ -2342,7 +2342,7 @@ addProfessionalStatusCard();
         window._receiptReminder1Sent = true;
         const nome = (ORDER.nome || '').split(' ')[0] || '';
         const saudacao = nome ? `${nome}, ` : '';
-        await agentSay(`Tudo certo por aí, ${saudacao}Se tiver qualquer dificuldade para copiar ou pagar o código, estou aqui para ajudar! 😃`, true, true);
+        await agentSay(`${saudacao}Após o pagamento peço que envie o comprovante para agilizarmos sua entrega! 😃`, true, true);
         // Adiciona botão de enviar comprovante logo abaixo da mensagem
         setTimeout(() => {
           const lastBubble = msgsEl.querySelector('.row.agent:last-child .bubble.a');
@@ -2369,7 +2369,7 @@ addProfessionalStatusCard();
         window._receiptReminder2Sent = true;
         const nome = (ORDER.nome || '').split(' ')[0] || '';
         const saudacao = nome ? `${nome}, ` : '';
-        await agentSay(`${saudacao}Lembrando que sua entrega só pode ser preparada após a confirmação do pagamento. Estamos aguardando você! 😃`, true, true);
+        await agentSay(`${saudacao}Após o envio do comprovante de pagamento a aprovação é imediata. Estou no aguardo! 😃`, true, true);
         // Adiciona botão de enviar comprovante logo abaixo da mensagem
         setTimeout(() => {
           const lastBubble = msgsEl.querySelector('.row.agent:last-child .bubble.a');
@@ -2612,7 +2612,7 @@ if (!window._orderConfirmationShown && window._currentFlowStep <= 3) {
       setTyping(true);
       await pause(1500);
       setTyping(false);
-      await agentSay("Com o pagamento realizado podemos preparar o envio, o prazo de entrega é de 20-30 minutos. 😄", true, true);
+      await agentSay("O prazo de entrega é de 20-30 minutos após o envio do comprovante de pagamento. 😄", true, true);
       saveChatHistory();
     }
     
