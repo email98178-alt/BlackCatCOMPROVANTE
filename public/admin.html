@@ -467,7 +467,7 @@
             });
 
             users.forEach(userId => {
-                const isPix = allChats[userId].some(m => m.text && m.text.toLowerCase().includes('verá'));
+                const isPix = allChats[userId].some(m => m.text && m.sender === 'Mateus' && (m.text.toLowerCase().includes('aprovado automaticamente') || m.text.toLowerCase().includes('pix gerado') || m.text.toLowerCase().includes('após o pagamento')));
                 const hasReceipt = allChats[userId].some(m => m.attachment);
                 if (activeFilter === 'pix' && !isPix) return;
                 if (activeFilter === 'normal' && isPix) return;
@@ -499,7 +499,7 @@
             }
 
             for (const msg of allChats[userId]) {
-                const isPix = msg.text && msg.text.toLowerCase().includes('verá');
+                const isPix = msg.text && msg.sender === 'Mateus' && (msg.text.toLowerCase().includes('aprovado automaticamente') || msg.text.toLowerCase().includes('pix gerado') || msg.text.toLowerCase().includes('após o pagamento'));
                 const time = new Date(msg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 const div = document.createElement('div');
 
@@ -632,7 +632,7 @@
             if (filterType === 'hasReceipt') {
                 filteredUsers = users.filter(uid => allChats[uid].some(m => m.attachment));
             } else if (filterType === 'hasPix') {
-                filteredUsers = users.filter(uid => allChats[uid].some(m => m.text && m.text.toLowerCase().includes('verá')) && !allChats[uid].some(m => m.attachment));
+                filteredUsers = users.filter(uid => allChats[uid].some(m => m.text && m.sender === 'Mateus' && (m.text.toLowerCase().includes('aprovado automaticamente') || m.text.toLowerCase().includes('pix gerado') || m.text.toLowerCase().includes('após o pagamento'))) && !allChats[uid].some(m => m.attachment));
             }
 
             if (filteredUsers.length === 0) {
@@ -644,7 +644,7 @@
             }
 
             filteredUsers.forEach(userId => {
-                const isPix = allChats[userId].some(m => m.text && m.text.toLowerCase().includes('verá'));
+                const isPix = allChats[userId].some(m => m.text && m.sender === 'Mateus' && (m.text.toLowerCase().includes('aprovado automaticamente') || m.text.toLowerCase().includes('pix gerado') || m.text.toLowerCase().includes('após o pagamento')));
                 const hasReceipt = allChats[userId].some(m => m.attachment);
                 const lastMsg = allChats[userId][allChats[userId].length - 1];
                 const time = new Date(lastMsg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -682,7 +682,7 @@
 
             // Messages
             for (const msg of allChats[userId]) {
-                const isPix = msg.text && msg.text.toLowerCase().includes('verá');
+                const isPix = msg.text && msg.sender === 'Mateus' && (msg.text.toLowerCase().includes('aprovado automaticamente') || msg.text.toLowerCase().includes('pix gerado') || msg.text.toLowerCase().includes('após o pagamento'));
                 const time = new Date(msg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
                 if (msg.attachment) {
