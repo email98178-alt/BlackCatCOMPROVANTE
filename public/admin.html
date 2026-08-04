@@ -197,31 +197,48 @@
         .attachment-block {
             max-width: 80%; align-self: flex-start;
             background: #fff; border: 1px solid var(--border-color); border-radius: 10px;
-            overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            overflow: visible; min-width: 220px;
+        }
+        .attachment-block .attachment-header {
+            padding: 12px 14px 8px; border-bottom: 1px solid var(--border-color);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .attachment-block .attachment-header-icon {
+            width: 36px; height: 36px; border-radius: 8px;
+            background: var(--message-user); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .attachment-block .attachment-header-icon svg { color: var(--primary); width: 18px; height: 18px; }
+        .attachment-block .attachment-header-info { flex: 1; min-width: 0; }
+        .attachment-block .attachment-header-info .att-filename {
+            font-size: 0.85rem; font-weight: 600; color: var(--text-primary);
+            word-break: break-word; line-height: 1.3;
+        }
+        .attachment-block .attachment-header-info .att-meta {
+            font-size: 0.7rem; color: var(--text-tertiary); margin-top: 2px;
         }
         .attachment-block img.attachment-preview {
-            max-width: 280px; max-height: 200px; display: block; cursor: pointer;
-            border-bottom: 1px solid var(--border-color);
+            max-width: 100%; max-height: 300px; display: block; cursor: pointer;
+            border-top: 1px solid var(--border-color);
         }
-        .attachment-block .attachment-info {
-            padding: 10px 14px; display: flex; align-items: center; gap: 10px;
+        .attachment-block .attachment-actions-row {
+            padding: 10px 14px; display: flex; align-items: center; gap: 8px;
+            border-top: 1px solid var(--border-color); background: #fafbfc;
         }
-        .attachment-block .attachment-info svg { flex-shrink: 0; color: var(--primary); }
-        .attachment-block .attachment-details { flex: 1; min-width: 0; }
-        .attachment-block .attachment-filename {
-            font-size: 0.8rem; font-weight: 600; color: var(--text-primary);
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        .attachment-block .attachment-actions-row a {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 7px 14px; border-radius: 7px; font-size: 0.8rem; font-weight: 600;
+            text-decoration: none; transition: all 0.2s;
         }
-        .attachment-block .attachment-size { font-size: 0.7rem; color: var(--text-tertiary); }
-        .attachment-block .attachment-actions { display: flex; gap: 6px; }
-        .attachment-block .attachment-actions a {
-            display: flex; align-items: center; justify-content: center;
-            width: 32px; height: 32px; border-radius: 6px;
-            background: var(--primary); color: #fff; text-decoration: none;
-            transition: background 0.2s;
+        .attachment-block .attachment-actions-row a.view-btn {
+            background: var(--primary); color: #fff;
         }
-        .attachment-block .attachment-actions a:hover { background: var(--primary-dark); }
-        .attachment-block .attachment-actions a svg { width: 16px; height: 16px; }
+        .attachment-block .attachment-actions-row a.view-btn:hover { background: var(--primary-dark); }
+        .attachment-block .attachment-actions-row a.download-btn {
+            background: #f0f9ff; color: var(--primary); border: 1px solid #bae6fd;
+        }
+        .attachment-block .attachment-actions-row a.download-btn:hover { background: #e0f2fe; }
+        .attachment-block .attachment-actions-row a svg { width: 15px; height: 15px; }
 
         /* RESPONSIVE */
         @media (max-width: 768px) {
@@ -347,7 +364,7 @@
                 area.appendChild(block);
             }
 
-            allChats[userId].forEach(msg => {
+            for (const msg of allChats[userId]) {
                 const isPix = msg.text && msg.text.toLowerCase().includes('verá');
                 const time = new Date(msg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 const div = document.createElement('div');
@@ -366,28 +383,42 @@
                         imgHtml = `<img class="attachment-preview" src="${fileUrl}" alt="${filename}" onclick="window.open('${fileUrl}','_blank')" onerror="this.style.display='none'">`;
                     }
 
-                    // Show message text above the attachment
-                    let textHtml = '';
-                    if (msg.text && msg.text.trim()) {
-                        textHtml = `<div class="message user" style="margin-bottom:4px;align-self:flex-start;"><strong>${msg.sender}:</strong> ${msg.text}<span class="meta">${time}</span></div>`;
-                    }
+                    const iconSvg = isImage
+                        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`
+                        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`;
 
                     div.innerHTML = `
-                        ${textHtml}
-                        <div class="attachment-info" style="padding-top:10px;">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                            <div class="attachment-details">
-                                <div class="attachment-filename">${filename}</div>
-                                <div class="attachment-size">${sizeKb}${sizeKb ? ' · ' : ''}${hasValidUrl ? '<a href="' + fileUrl + '" target="_blank" style="color:var(--primary);font-weight:600;text-decoration:none;">Ver no servidor</a>' : ''}</div>
+                        <div class="attachment-header">
+                            <div class="attachment-header-icon">${iconSvg}</div>
+                            <div class="attachment-header-info">
+                                <div class="att-filename">${filename}</div>
+                                <div class="att-meta">${sizeKb} · Enviado por <strong>${msg.sender}</strong> às ${time}</div>
                             </div>
-                            ${hasValidUrl ? `<div class="attachment-actions">
-                                <a href="${fileUrl}" target="_blank" title="Visualizar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a>
-                                <a href="${fileUrl}" download="${filename}" title="Baixar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></a>
-                            </div>` : '<span style="font-size:0.7rem;color:#ef4444;padding:4px 10px;">URL não disponível</span>'}
                         </div>
                         ${imgHtml}
+                        ${hasValidUrl ? `<div class="attachment-actions-row">
+                            <a href="${fileUrl}" target="_blank" class="view-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                Visualizar
+                            </a>
+                            <a href="${fileUrl}" download="${filename}" class="download-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                Baixar
+                            </a>
+                        </div>` : `<div class="attachment-actions-row"><span style="font-size:0.75rem;color:#ef4444;">Arquivo sem URL disponível no servidor</span></div>`}
                     `;
-                } else if (isPix) {
+                    
+                    // Also show the message text as a separate bubble above
+                    if (msg.text && msg.text.trim()) {
+                        const textDiv = document.createElement('div');
+                        textDiv.className = 'message user';
+                        textDiv.innerHTML = `<strong>${msg.sender}:</strong> ${msg.text}<span class="meta">${time}</span>`;
+                        area.appendChild(textDiv);
+                    }
+                    area.appendChild(div);
+                    continue; // Skip the normal append at the end
+                }
+                if (isPix) {
                     div.className = 'pix-highlight-block';
                     div.innerHTML = `<span class="pix-label">💳 Pix Gerado</span><div class="content"><strong>${msg.sender}:</strong> ${msg.text}</div><span class="meta">${time}</span>`;
                 } else {
@@ -395,7 +426,7 @@
                     div.innerHTML = `<strong>${msg.sender}:</strong> ${msg.text}<span class="meta">${time}</span>`;
                 }
                 area.appendChild(div);
-            });
+            }
             
             chatReadStatus[userId] = true;
             renderChatList();
