@@ -288,6 +288,7 @@
         });
 
         socket.on('new_message_for_admin', (message) => {
+            console.log('Mensagem recebida no admin:', JSON.stringify(message));
             if (!allChats[message.userId]) { allChats[message.userId] = []; chatReadStatus[message.userId] = false; }
             allChats[message.userId].push(message);
             chatReadStatus[message.userId] = false;
