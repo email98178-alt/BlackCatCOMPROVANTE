@@ -2322,7 +2322,7 @@ PASSO ATUAL: ${currentFlowStep}
         message: userMessage, 
         context: context, 
         currentFlowStep: currentFlowStep,
-        userId: localStorage.getItem('dg_user_id') || 'anon-' + Math.random().toString(36).substr(2, 9),
+        userId: userId,
         url: window.location.href
       })
     });
