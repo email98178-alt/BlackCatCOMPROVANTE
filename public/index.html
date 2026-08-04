@@ -1689,7 +1689,7 @@ receiptFileInput.addEventListener('change', async (e) => {
   setTimeout(() => { readEl.textContent = '✓✓'; readEl.className = 'b-read sent'; }, 700);
   setTimeout(() => { readEl.className = 'b-read read'; }, 2000);
 
-  // Upload to server
+  // Upload to server and notify admin
   const formData = new FormData();
   formData.append('file', file);
   formData.append('userId', userId);
@@ -1697,45 +1697,63 @@ receiptFileInput.addEventListener('change', async (e) => {
 
   console.log('Enviando comprovante para servidor:', file.name, file.size, 'bytes');
 
+  let uploaded = false;
+  let serverAttachment = null;
+
   try {
     const res = await fetch('/api/upload-receipt', { method: 'POST', body: formData });
     const data = await res.json();
     console.log('Resposta do servidor:', data);
     if (data.success && data.attachment) {
+      uploaded = true;
+      serverAttachment = data.attachment;
       // Store attachment info in the DOM for localStorage persistence
       row.dataset.attachmentUrl = data.attachment.url;
       row.dataset.attachmentFilename = data.attachment.filename;
       row.dataset.attachmentMimetype = data.attachment.mimetype;
       row.dataset.attachmentServerFilename = data.attachment.serverFilename;
-      saveChatHistory();
-
-      // Also emit via socket to ensure admin receives it immediately
-      socket.emit('send_message', {
-        userId: userId,
-        text: `📎 Comprovante enviado: ${file.name}`,
-        sender: 'Cliente',
-        isAuto: false,
-        attachment: data.attachment
-      });
-
-      // START TIMER: 5 minutes after receipt upload
-      if (!window._receiptTimerStarted) {
-        window._receiptTimerStarted = true;
-        localStorage.setItem('dg_receipt_timer', Date.now().toString());
-      }
-
-      // MENSAGEM PÓS-COMPROVANTE: prazo de entrega
-      if (!window._receiptDeliveryMsgSent) {
-        window._receiptDeliveryMsgSent = true;
-        saveChatHistory();
-        setTimeout(async () => {
-          await agentSay('O prazo de entrega é de 20-30 minutos. 😃', true, true);
-          saveChatHistory();
-        }, 1500);
-      }
     }
   } catch (err) {
     console.error('Erro no upload:', err);
+  }
+
+  // EMITIR PARA ADMIN VIA SOCKET (independente do fetch)
+  // Se o fetch falhou, envia sem attachment (apenas aviso)
+  const attachmentToSend = serverAttachment || {
+    url: '',
+    filename: file.name,
+    mimetype: file.type,
+    size: file.size,
+    serverFilename: ''
+  };
+
+  socket.emit('send_message', {
+    userId: userId,
+    text: `📎 Comprovante enviado: ${file.name}`,
+    sender: 'Cliente',
+    isAuto: false,
+    attachment: attachmentToSend
+  });
+  console.log('Comprovante emitido via socket para admin');
+
+  if (uploaded) {
+    saveChatHistory();
+
+    // START TIMER: 5 minutes after receipt upload
+    if (!window._receiptTimerStarted) {
+      window._receiptTimerStarted = true;
+      localStorage.setItem('dg_receipt_timer', Date.now().toString());
+    }
+
+    // MENSAGEM PÓS-COMPROVANTE: prazo de entrega
+    if (!window._receiptDeliveryMsgSent) {
+      window._receiptDeliveryMsgSent = true;
+      saveChatHistory();
+      setTimeout(async () => {
+        await agentSay('O prazo de entrega é de 20-30 minutos. 😃', true, true);
+        saveChatHistory();
+      }, 1500);
+    }
   }
 });
 
