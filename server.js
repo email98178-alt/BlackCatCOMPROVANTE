@@ -239,41 +239,19 @@ app.post('/api/upload-receipt', upload.single('file'), (req, res) => {
     const size = req.file.size;
     const fileUrl = `/uploads/${filename}`;
 
-    const receiptMessage = {
-      userId,
-      sender,
-      text: `📎 Comprovante enviado: ${originalName}`,
-      timestamp: new Date().toISOString(),
-      attachment: {
-        url: fileUrl,
-        filename: originalName,
-        mimetype,
-        size,
-        serverFilename: filename,
-      }
+    const attachment = {
+      url: fileUrl,
+      filename: originalName,
+      mimetype,
+      size,
+      serverFilename: filename,
     };
 
-    // Armazena no histórico
-    if (!chatHistory[userId]) chatHistory[userId] = [];
-    chatHistory[userId].push(receiptMessage);
-
-    // Envia para admins via Socket.IO
-    const adminRooms = io.of('/').adapter.rooms.get('admins');
-    const adminCount = adminRooms ? adminRooms.size : 0;
-    io.to('admins').emit('new_message_for_admin', receiptMessage);
-
-    console.log(`Comprovante recebido de ${userId}: ${originalName} (${size} bytes) | Admins conectados: ${adminCount}`);
-    console.log('Mensagem emitida para admins:', JSON.stringify(receiptMessage));
+    console.log(`Comprovante recebido de ${userId}: ${originalName} (${size} bytes)`);
 
     return res.json({
       success: true,
-      attachment: {
-        url: fileUrl,
-        filename: originalName,
-        mimetype,
-        size,
-        serverFilename: filename,
-      }
+      attachment
     });
   } catch (err) {
     console.error('Erro no upload:', err.message);
@@ -480,8 +458,7 @@ io.on('connection', socket => {
 
     console.log(`Mensagem de ${sender} (${userId}): ${text}${attachment ? ' (com anexo)' : ''}`);
     
-    // Se for mensagem automática (do agente), envia apenas para admins
-    // Se for mensagem do usuário, envia para admins
+    // Envia para todos os admins conectados
     io.to('admins').emit('new_message_for_admin', message);
   });
 
