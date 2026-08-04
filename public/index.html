@@ -987,6 +987,56 @@ html,body{
 
 #receiptFileInput{display:none;}
 
+/* ── RECEIPT MODAL ── */
+.receipt-modal-overlay{
+  position:absolute;inset:0;background:rgba(0,0,0,.4);
+  z-index:1050;display:none;align-items:flex-end;justify-content:center;
+  backdrop-filter:blur(4px);
+}
+.receipt-modal-overlay.on{display:flex;}
+.receipt-modal{
+  width:100%;max-width:430px;background:#fff;
+  border-radius:24px 24px 0 0;padding:24px 20px 20px;
+  box-shadow:0 -8px 30px rgba(0,0,0,.12);
+  animation:slideUp .35s var(--spring);
+  text-align:center;
+}
+.receipt-modal-icon{
+  width:56px;height:56px;border-radius:50%;
+  background:var(--brand-lt);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 14px;
+}
+.receipt-modal-icon svg{color:var(--brand);}
+.receipt-modal-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.receipt-modal-desc{font-size:13px;color:var(--text-3);margin-bottom:20px;line-height:1.5;}
+.receipt-modal-btn{
+  width:100%;padding:14px;border-radius:14px;
+  background:var(--brand);color:#fff;border:none;
+  font-weight:700;font-size:14px;cursor:pointer;
+  box-shadow:0 4px 14px rgba(15,91,168,.25);
+  transition:all .2s ease;margin-bottom:10px;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.receipt-modal-btn:hover{background:var(--brand-mid);transform:translateY(-1px);}
+.receipt-modal-btn:active{transform:scale(.97);}
+.receipt-modal-cancel{
+  width:100%;padding:12px;border-radius:12px;
+  background:var(--surface-2);color:var(--text-2);border:none;
+  font-weight:600;font-size:13px;cursor:pointer;
+  transition:all .2s ease;
+}
+.receipt-modal-cancel:hover{background:var(--border-2);}
+.receipt-modal-formats{
+  margin-top:14px;padding-top:12px;border-top:1px solid var(--border-2);
+  display:flex;justify-content:center;gap:12px;
+}
+.receipt-format-tag{
+  font-size:10px;font-weight:700;color:var(--text-3);
+  text-transform:uppercase;letter-spacing:.8px;
+  background:var(--surface-2);padding:4px 8px;border-radius:6px;
+}
+
 </style>
 </head>
 <body>
@@ -1073,6 +1123,28 @@ html,body{
   </footer>
 
 
+
+  <!-- RECEIPT MODAL -->
+  <div class="receipt-modal-overlay" id="receiptModalOverlay">
+    <div class="receipt-modal">
+      <div class="modal-handle"></div>
+      <div class="receipt-modal-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      </div>
+      <div class="receipt-modal-title">Enviar Comprovante</div>
+      <div class="receipt-modal-desc">Selecione a imagem ou PDF do comprovante de pagamento para enviar ao vendedor.</div>
+      <button class="receipt-modal-btn" id="receiptModalSelectBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Selecionar Arquivo
+      </button>
+      <button class="receipt-modal-cancel" id="receiptModalCancelBtn">Cancelar</button>
+      <div class="receipt-modal-formats">
+        <span class="receipt-format-tag">JPG</span>
+        <span class="receipt-format-tag">PNG</span>
+        <span class="receipt-format-tag">PDF</span>
+      </div>
+    </div>
+  </div>
 
   <!-- ORDER MODAL -->
   <div class="modal-overlay" id="modalOverlay">
@@ -1524,11 +1596,34 @@ sendBtnEl.addEventListener('click', () => doSend());
 // ── FILE UPLOAD ──────────────────────────────────────
 const receiptFileInput = document.getElementById('receiptFileInput');
 const fileUploadBtn = document.getElementById('fileUploadBtn');
+const receiptModalOverlay = document.getElementById('receiptModalOverlay');
+const receiptModalSelectBtn = document.getElementById('receiptModalSelectBtn');
+const receiptModalCancelBtn = document.getElementById('receiptModalCancelBtn');
 
+// Clicar no ícone de clipe → abre o modal
 fileUploadBtn.addEventListener('click', (e) => {
   e.preventDefault();
+  receiptModalOverlay.classList.add('on');
+});
+
+// Clicar em "Selecionar Arquivo" dentro do modal → abre o seletor
+receiptModalSelectBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  receiptModalOverlay.classList.remove('on');
   receiptFileInput.value = '';
   receiptFileInput.click();
+});
+
+// Cancelar modal
+receiptModalCancelBtn.addEventListener('click', () => {
+  receiptModalOverlay.classList.remove('on');
+});
+
+// Clicar fora do modal → fechar
+receiptModalOverlay.addEventListener('click', (e) => {
+  if (e.target === receiptModalOverlay) {
+    receiptModalOverlay.classList.remove('on');
+  }
 });
 
 receiptFileInput.addEventListener('change', async (e) => {
