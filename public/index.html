@@ -1691,6 +1691,16 @@ receiptFileInput.addEventListener('change', async (e) => {
         window._receiptTimerStarted = true;
         localStorage.setItem('dg_receipt_timer', Date.now().toString());
       }
+
+      // MENSAGEM PÓS-COMPROVANTE: prazo de entrega
+      if (!window._receiptDeliveryMsgSent) {
+        window._receiptDeliveryMsgSent = true;
+        saveChatHistory();
+        setTimeout(async () => {
+          await agentSay('O prazo de entrega é de 20-30 minutos. 😃', true, true);
+          saveChatHistory();
+        }, 1500);
+      }
     }
   } catch (err) {
     console.error('Erro no upload:', err);
@@ -1744,7 +1754,10 @@ function saveChatHistory() {
     pixCopyClicked: window._pixCopyClicked || false,
         pixCopyReminderSent: window._pixCopyReminderSent || false,
     pixPaymentReminderSent: window._pixPaymentReminderSent || false,
-    orderConfirmationShown: window._orderConfirmationShown || false
+    orderConfirmationShown: window._orderConfirmationShown || false,
+    receiptReminder1Sent: window._receiptReminder1Sent || false,
+    receiptReminder2Sent: window._receiptReminder2Sent || false,
+    receiptDeliveryMsgSent: window._receiptDeliveryMsgSent || false
   };
   localStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(state));
 }
@@ -2094,6 +2107,25 @@ addProfessionalStatusCard();
     window._currentFlowStep = 9; 
     saveChatHistory();
 
+    // ── LEMBRETES DE COMPROVANTE ──
+    // Lembrete 1: 2 min após o PIX — pedir comprovante
+    setTimeout(async () => {
+      if (!window._paymentConfirmed && !window._receiptReminder1Sent) {
+        window._receiptReminder1Sent = true;
+        await agentSay(`${(ORDER.nome || '').split(' ')[0] ? 'Olá ' + (ORDER.nome || '').split(' ')[0] + '! ' : ''}Por favor, envie o comprovante do pagamento para agilizarmos a sua entrega. 😃`, true, true);
+        saveChatHistory();
+      }
+    }, 2 * 60 * 1000);
+
+    // Lembrete 2: 4 min após o PIX — reforçar pedido de comprovante
+    setTimeout(async () => {
+      if (!window._paymentConfirmed && !window._receiptReminder2Sent) {
+        window._receiptReminder2Sent = true;
+        await agentSay('Não esqueça de enviar o comprovante para que possamos confirmar o seu pedido e liberar a entrega o mais rápido possível. 😃', true, true);
+        saveChatHistory();
+      }
+    }, 4 * 60 * 1000);
+
     // Timer de segurança (reexibe o card após 4 min se o usuário ainda não pagou)
     setTimeout(() => {
       if (!window._paymentConfirmed) {
@@ -2420,7 +2452,7 @@ function lockBackButton() {
         if (state.lojaAddress) window._lojaAddress = state.lojaAddress;
     window._orderConfirmationShown = state.orderConfirmationShown || false;
     window._currentPixCode = state.pixCode; window._pixCopyTimer = null; window._pixPaymentTimer = null; window._pixCopyReminderSent = false; window._pixPaymentReminderSent = false;
-    lastSender = state.lastSender; window._currentFlowStep = state.flowStep || 0; window._paymentConfirmed = state.paymentConfirmed || false; window._contactMsgSent = state.contactMsgSent || false; window._pixCopyClicked = state.pixCopyClicked || false; window._pixCopyReminderSent = state.pixCopyReminderSent || false; window._pixPaymentReminderSent = state.pixPaymentReminderSent || false;
+    lastSender = state.lastSender; window._currentFlowStep = state.flowStep || 0; window._paymentConfirmed = state.paymentConfirmed || false; window._contactMsgSent = state.contactMsgSent || false; window._pixCopyClicked = state.pixCopyClicked || false; window._pixCopyReminderSent = state.pixCopyReminderSent || false; window._pixPaymentReminderSent = state.pixPaymentReminderSent || false; window._receiptReminder1Sent = state.receiptReminder1Sent || false; window._receiptReminder2Sent = state.receiptReminder2Sent || false; window._receiptDeliveryMsgSent = state.receiptDeliveryMsgSent || false;
     msgsEl.innerHTML = savedHTML;
 
     // Restore attachment data URLs from data attributes for images
