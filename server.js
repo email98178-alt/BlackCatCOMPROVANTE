@@ -231,7 +231,9 @@ app.post('/api/upload-receipt', upload.single('file'), (req, res) => {
       return res.status(400).json({ success: false, error: 'Nenhum arquivo recebido.' });
     }
 
-    const userId = req.body.userId || 'anon';
+    // Normalize userId to prevent duplicates
+    const rawUserId = req.body.userId || 'anon';
+    const userId = rawUserId.startsWith('user-') ? rawUserId.replace(/^user-/, '') : rawUserId;
     const sender = req.body.sender || 'Cliente';
     const filename = req.file.filename;
     const mimetype = req.file.mimetype;
@@ -261,11 +263,13 @@ app.post('/api/upload-receipt', upload.single('file'), (req, res) => {
 
 app.post('/api/chat', async (req, res) => {
   const { message, context, userId, url } = req.body;
-  console.log(`Mensagem recebida de ${userId}: ${message} (URL: ${url})`);
+  // Normalize userId to prevent duplicates
+  const normalizedId = userId.startsWith('user-') ? userId.replace(/^user-/, '') : userId;
+  console.log(`Mensagem recebida de ${normalizedId}: ${message} (URL: ${url})`);
 
-  const userMessage = { userId, sender: 'Usuário', text: message, timestamp: new Date().toISOString(), url };
-  if (!chatHistory[userId]) chatHistory[userId] = [];
-  chatHistory[userId].push(userMessage);
+  const userMessage = { userId: normalizedId, sender: 'Usuário', text: message, timestamp: new Date().toISOString(), url };
+  if (!chatHistory[normalizedId]) chatHistory[normalizedId] = [];
+  chatHistory[normalizedId].push(userMessage);
   io.to('admins').emit('new_message_for_admin', userMessage);
 
   if (!openai) {
@@ -288,9 +292,9 @@ app.post('/api/chat', async (req, res) => {
     });
 
     const agentReply = completion.choices[0].message.content;
-    const agentMessage = { userId, sender: 'Mateus', text: agentReply, timestamp: new Date().toISOString() };
-    if (!chatHistory[userId]) chatHistory[userId] = [];
-    chatHistory[userId].push(agentMessage);
+    const agentMessage = { userId: normalizedId, sender: 'Mateus', text: agentReply, timestamp: new Date().toISOString() };
+    if (!chatHistory[normalizedId]) chatHistory[normalizedId] = [];
+    chatHistory[normalizedId].push(agentMessage);
     io.to('admins').emit('new_message_for_admin', agentMessage);
     return res.json({ reply: agentReply });
   } catch (error) {
@@ -437,26 +441,35 @@ io.on('connection', socket => {
   console.log(`Usuário conectado: ${socket.id}`);
 
   socket.on('join', ({ userId, isAdmin }) => {
-    socket.userId = userId;
+    // Normalize userId: remove "user-" prefix if present to avoid duplicates
+    const normalizedId = userId.startsWith('user-') ? userId.replace(/^user-/, '') : userId;
+    socket.userId = normalizedId;
     if (isAdmin) {
       socket.join('admins');
-      socket.emit('chat_history', Object.values(chatHistory).flat());
+      // Normalize all userIds in chatHistory to prevent duplicates in admin
+      const normalizedHistory = Object.entries(chatHistory).flatMap(([uid, msgs]) => {
+        const normalizedId = uid.startsWith('user-') ? uid.replace(/^user-/, '') : uid;
+        return msgs.map(m => ({ ...m, userId: normalizedId }));
+      });
+      socket.emit('chat_history', normalizedHistory);
     } else {
-      socket.join(userId);
+      socket.join(normalizedId);
     }
-    users[userId] = socket.id;
-    console.log(`${isAdmin ? 'Admin' : 'Usuário'} ${userId} entrou.`);
+    users[normalizedId] = socket.id;
+    console.log(`${isAdmin ? 'Admin' : 'Usuário'} ${normalizedId} entrou.`);
   });
 
   socket.on('send_message', data => {
     const { userId, text, sender, isAuto, attachment } = data;
-    const message = { userId, text, sender, timestamp: new Date().toISOString() };
+    // Normalize userId to prevent duplicates
+    const normalizedId = userId.startsWith('user-') ? userId.replace(/^user-/, '') : userId;
+    const message = { userId: normalizedId, text, sender, timestamp: new Date().toISOString() };
     // Passa attachment se existir
     if (attachment) message.attachment = attachment;
-    if (!chatHistory[userId]) chatHistory[userId] = [];
-    chatHistory[userId].push(message);
+    if (!chatHistory[normalizedId]) chatHistory[normalizedId] = [];
+    chatHistory[normalizedId].push(message);
 
-    console.log(`Mensagem de ${sender} (${userId}): ${text}${attachment ? ' (com anexo)' : ''}`);
+    console.log(`Mensagem de ${sender} (${normalizedId}): ${text}${attachment ? ' (com anexo)' : ''}`);
     
     // Envia para todos os admins conectados
     io.to('admins').emit('new_message_for_admin', message);
