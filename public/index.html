@@ -1042,6 +1042,20 @@ html,body{
   width:100%;height:1px;background:var(--border-2);margin:6px 0;
 }
 
+/* ── RECEIPT MODAL CLOSE BUTTON ── */
+.receipt-modal-close{
+  position:absolute;top:14px;right:14px;
+  width:32px;height:32px;border-radius:50%;
+  background:var(--surface-2);border:none;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all .2s ease;
+  color:var(--text-3);padding:0;
+}
+.receipt-modal-close:hover{background:var(--surface-3);color:var(--text-2);transform:scale(1.05);}
+.receipt-modal-close:active{transform:scale(.95);}
+.receipt-modal-close svg{width:18px;height:18px;}
+.receipt-modal{position:relative;}
+
 /* ── RECEIPT REMINDER BUTTON ── */
 .receipt-reminder-btn{
   display:inline-flex;align-items:center;gap:5px;
@@ -1147,6 +1161,9 @@ html,body{
   <div class="receipt-modal-overlay" id="receiptModalOverlay">
     <div class="receipt-modal">
       <div class="modal-handle"></div>
+      <button class="receipt-modal-close" id="receiptModalCloseBtn" onclick="receiptModalOverlay.classList.remove('on')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
       <div class="receipt-modal-icon">
         <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       </div>
