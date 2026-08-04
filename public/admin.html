@@ -110,6 +110,7 @@
 
         .chat-list-item:hover { background: var(--bg-primary); }
         .chat-list-item.unread { background: var(--pix-bg); border-color: var(--pix-color); }
+        .chat-list-item.has-receipt { border-left: 3px solid var(--primary); }
 
         .chat-list-item .user-id { font-weight: 600; font-size: 0.9rem; color: var(--primary); display: block; margin-bottom: 4px; }
         .chat-list-item .last-msg { font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -288,11 +289,15 @@
         });
 
         socket.on('new_message_for_admin', (message) => {
-            console.log('Mensagem recebida no admin:', JSON.stringify(message));
+            console.log('[ADMIN] Mensagem recebida:', JSON.stringify(message));
             if (!allChats[message.userId]) { allChats[message.userId] = []; chatReadStatus[message.userId] = false; }
             allChats[message.userId].push(message);
             chatReadStatus[message.userId] = false;
             renderChatList();
+            // Auto-abre o modal se for comprovante
+            if (message.attachment) {
+                console.log('[ADMIN] Comprovante recebido com attachment:', JSON.stringify(message.attachment));
+            }
         });
 
         function setActiveFilter(filter) {
@@ -312,6 +317,7 @@
 
             users.forEach(userId => {
                 const isPix = allChats[userId].some(m => m.text && m.text.toLowerCase().includes('verá'));
+                const hasReceipt = allChats[userId].some(m => m.attachment);
                 if (activeFilter === 'pix' && !isPix) return;
                 if (activeFilter === 'normal' && isPix) return;
 
@@ -319,9 +325,9 @@
                 const time = new Date(lastMsg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 
                 const item = document.createElement('div');
-                item.className = `chat-list-item ${!chatReadStatus[userId] ? 'unread' : ''}`;
+                item.className = `chat-list-item ${!chatReadStatus[userId] ? 'unread' : ''} ${hasReceipt ? 'has-receipt' : ''}`;
                 item.onclick = () => openModal(userId);
-                item.innerHTML = `<span class="user-id">${userId}</span><p class="last-msg">${lastMsg.text}</p><span class="time">${time}</span>${!chatReadStatus[userId] ? '<div class="unread-indicator"></div>' : ''}`;
+                item.innerHTML = `<span class="user-id">${hasReceipt ? '📎 ' : ''}${userId}</span><p class="last-msg">${lastMsg.text}</p><span class="time">${time}</span>${!chatReadStatus[userId] ? '<div class="unread-indicator"></div>' : ''}`;
                 container.appendChild(item);
             });
         }
@@ -353,26 +359,33 @@
                     const fileUrl = msg.attachment.url;
                     const filename = msg.attachment.filename || 'Arquivo';
                     const sizeKb = msg.attachment.size ? (msg.attachment.size / 1024).toFixed(1) + ' KB' : '';
+                    const hasValidUrl = fileUrl && fileUrl.startsWith('/uploads/');
 
                     let imgHtml = '';
-                    if (isImage) {
-                        imgHtml = `<img class="attachment-preview" src="${fileUrl}" alt="${filename}" onclick="window.open('${fileUrl}','_blank')">`;
+                    if (isImage && hasValidUrl) {
+                        imgHtml = `<img class="attachment-preview" src="${fileUrl}" alt="${filename}" onclick="window.open('${fileUrl}','_blank')" onerror="this.style.display='none'">`;
+                    }
+
+                    // Show message text above the attachment
+                    let textHtml = '';
+                    if (msg.text && msg.text.trim()) {
+                        textHtml = `<div class="message user" style="margin-bottom:4px;align-self:flex-start;"><strong>${msg.sender}:</strong> ${msg.text}<span class="meta">${time}</span></div>`;
                     }
 
                     div.innerHTML = `
-                        ${imgHtml}
-                        <div class="attachment-info">
+                        ${textHtml}
+                        <div class="attachment-info" style="padding-top:10px;">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                             <div class="attachment-details">
                                 <div class="attachment-filename">${filename}</div>
-                                <div class="attachment-size">${sizeKb}${sizeKb ? ' · ' : ''}<strong>${msg.sender}</strong></div>
+                                <div class="attachment-size">${sizeKb}${sizeKb ? ' · ' : ''}${hasValidUrl ? '<a href="' + fileUrl + '" target="_blank" style="color:var(--primary);font-weight:600;text-decoration:none;">Ver no servidor</a>' : ''}</div>
                             </div>
-                            <div class="attachment-actions">
+                            ${hasValidUrl ? `<div class="attachment-actions">
                                 <a href="${fileUrl}" target="_blank" title="Visualizar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a>
                                 <a href="${fileUrl}" download="${filename}" title="Baixar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></a>
-                            </div>
+                            </div>` : '<span style="font-size:0.7rem;color:#ef4444;padding:4px 10px;">URL não disponível</span>'}
                         </div>
-                        <span class="meta" style="padding:4px 14px 8px;text-align:right;">${time}</span>
+                        ${imgHtml}
                     `;
                 } else if (isPix) {
                     div.className = 'pix-highlight-block';
