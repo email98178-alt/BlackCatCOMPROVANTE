@@ -987,28 +987,6 @@ html,body{
 
 #receiptFileInput{display:none;}
 
-.upload-preview-overlay{
-  position:absolute;inset:0;background:rgba(0,0,0,.5);
-  z-index:999;display:none;align-items:flex-end;justify-content:center;
-  backdrop-filter:blur(2px);
-}
-.upload-preview-overlay.on{display:flex;}
-.upload-preview-card{
-  width:100%;max-width:430px;background:#fff;
-  border-radius:20px 20px 0 0;padding:16px;
-  animation:slideUp .3s var(--spring);
-}
-.preview-thumb{width:100%;max-height:200px;object-fit:contain;border-radius:10px;background:#f5f5f5;margin-bottom:12px;}
-.preview-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;}
-.preview-size{font-size:11px;color:var(--text-3);margin-bottom:14px;}
-.preview-actions{display:flex;gap:8px;}
-.preview-actions button{flex:1;padding:10px;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;border:none;transition:all .15s;}
-.btn-cancel-preview{background:var(--surface-2);color:var(--text-2);}
-.btn-cancel-preview:hover{background:var(--border-2);}
-.btn-send-preview{background:var(--brand);color:#fff;}
-.btn-send-preview:hover{background:var(--brand-mid);}
-.btn-send-preview:disabled{opacity:.5;cursor:not-allowed;}
-
 </style>
 </head>
 <body>
@@ -1094,19 +1072,7 @@ html,body{
     </button>
   </footer>
 
-  <!-- UPLOAD PREVIEW OVERLAY -->
-  <div class="upload-preview-overlay" id="uploadPreviewOverlay">
-    <div class="upload-preview-card">
-      <div class="modal-handle" style="margin:0 auto 12px;"></div>
-      <img class="preview-thumb" id="previewThumb" style="display:none;">
-      <div class="preview-name" id="previewName"></div>
-      <div class="preview-size" id="previewSize"></div>
-      <div class="preview-actions">
-        <button class="btn-cancel-preview" id="cancelPreview">Cancelar</button>
-        <button class="btn-send-preview" id="sendPreview">Enviar Comprovante</button>
-      </div>
-    </div>
-  </div>
+
 
   <!-- ORDER MODAL -->
   <div class="modal-overlay" id="modalOverlay">
@@ -1558,15 +1524,6 @@ sendBtnEl.addEventListener('click', () => doSend());
 // ── FILE UPLOAD ──────────────────────────────────────
 const receiptFileInput = document.getElementById('receiptFileInput');
 const fileUploadBtn = document.getElementById('fileUploadBtn');
-const uploadPreviewOverlay = document.getElementById('uploadPreviewOverlay');
-const previewThumb = document.getElementById('previewThumb');
-const previewName = document.getElementById('previewName');
-const previewSize = document.getElementById('previewSize');
-const cancelPreviewBtn = document.getElementById('cancelPreview');
-const sendPreviewBtn = document.getElementById('sendPreview');
-
-let pendingFile = null;
-let pendingFileDataUrl = null;
 
 fileUploadBtn.addEventListener('click', (e) => {
   e.preventDefault();
@@ -1574,7 +1531,7 @@ fileUploadBtn.addEventListener('click', (e) => {
   receiptFileInput.click();
 });
 
-receiptFileInput.addEventListener('change', (e) => {
+receiptFileInput.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
   
@@ -1585,58 +1542,24 @@ receiptFileInput.addEventListener('change', (e) => {
     return;
   }
 
-  pendingFile = file;
-  pendingFileDataUrl = null;
-
-  // Show preview
-  previewName.textContent = file.name;
-  previewSize.textContent = (file.size / 1024).toFixed(1) + ' KB';
-
-  if (file.type.startsWith('image/')) {
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      pendingFileDataUrl = ev.target.result;
-      previewThumb.src = pendingFileDataUrl;
-      previewThumb.style.display = 'block';
-    };
-    reader.readAsDataURL(file);
-  } else {
-    previewThumb.style.display = 'none';
-  }
-
-  uploadPreviewOverlay.classList.add('on');
   receiptFileInput.value = '';
-});
-
-cancelPreviewBtn.addEventListener('click', () => {
-  uploadPreviewOverlay.classList.remove('on');
-  pendingFile = null;
-  pendingFileDataUrl = null;
-});
-
-uploadPreviewOverlay.addEventListener('click', (e) => {
-  if (e.target === uploadPreviewOverlay) {
-    uploadPreviewOverlay.classList.remove('on');
-    pendingFile = null;
-    pendingFileDataUrl = null;
-  }
-});
-
-sendPreviewBtn.addEventListener('click', async () => {
-  if (!pendingFile) return;
-  uploadPreviewOverlay.classList.remove('on');
-  sendPreviewBtn.disabled = true;
-  sendPreviewBtn.textContent = 'Enviando...';
 
   // Show message in chat immediately
-  const fileExt = pendingFile.name.split('.').pop().toLowerCase();
+  const fileExt = file.name.split('.').pop().toLowerCase();
   const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt);
   let attachmentHtml = '';
 
-  if (isImage && pendingFileDataUrl) {
-    attachmentHtml = `<div class="bubble-attachment"><img src="${pendingFileDataUrl}" alt="Comprovante" onclick="window.open('${pendingFileDataUrl}','_blank')"></div>`;
+  if (isImage) {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target.result;
+      attachmentHtml = `<div class="bubble-attachment"><img src="${dataUrl}" alt="Comprovante" onclick="window.open('${dataUrl}','_blank')"></div>`;
+      row.querySelector('.bubble').insertAdjacentHTML('beforeend', attachmentHtml);
+      scrollDown();
+    };
+    reader.readAsDataURL(file);
   } else {
-    attachmentHtml = `<div class="bubble-attachment bubble-attachment-pdf"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span>📄 ${pendingFile.name}</span></div>`;
+    attachmentHtml = `<div class="bubble-attachment bubble-attachment-pdf"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span>📄 ${file.name}</span></div>`;
   }
 
   const row = document.createElement('div');
@@ -1653,7 +1576,7 @@ sendPreviewBtn.addEventListener('click', async () => {
 
   // Upload to server
   const formData = new FormData();
-  formData.append('file', pendingFile);
+  formData.append('file', file);
   formData.append('userId', userId);
   formData.append('sender', 'Cliente');
 
@@ -1667,15 +1590,16 @@ sendPreviewBtn.addEventListener('click', async () => {
       row.dataset.attachmentMimetype = data.attachment.mimetype;
       row.dataset.attachmentServerFilename = data.attachment.serverFilename;
       saveChatHistory();
+
+      // START TIMER: 5 minutes after receipt upload
+      if (!window._receiptTimerStarted) {
+        window._receiptTimerStarted = true;
+        localStorage.setItem('dg_receipt_timer', Date.now().toString());
+      }
     }
   } catch (err) {
     console.error('Erro no upload:', err);
   }
-
-  pendingFile = null;
-  pendingFileDataUrl = null;
-  sendPreviewBtn.disabled = false;
-  sendPreviewBtn.textContent = 'Enviar Comprovante';
 });
 
 // ── MESSAGES ─────────────────────────────────────────
@@ -2462,10 +2386,11 @@ function lockBackButton() {
 </script>
 <script>
 (function () {
-  const REDIRECT_URL    = 'https://concluerror.onrender.com';
-  const MS_FIRST_ACCESS = 25 * 60 * 1000;
-  const MS_AFTER_PIX    = 15 * 60 * 1000;
-  const KEY_FA  = 'dg_fa'; const KEY_PT  = 'dg_pt';
+  const REDIRECT_URL       = 'https://concluerror.onrender.com';
+  const MS_FIRST_ACCESS    = 25 * 60 * 1000;
+  const MS_AFTER_RECEIPT   = 5 * 60 * 1000; // 5 minutos após envio de comprovante
+  const KEY_FA             = 'dg_fa';
+  const KEY_RECEIPT_TIMER  = 'dg_receipt_timer';
   let _timer = null;
   function startTimer(ms) {
     if (_timer) clearTimeout(_timer);
@@ -2476,11 +2401,24 @@ function lockBackButton() {
   let remainFA = MS_FIRST_ACCESS - (Date.now() - parseInt(fa));
   if (remainFA <= 0) { window.location.href = REDIRECT_URL; return; }
   startTimer(remainFA);
+
+  // Timer de 5 min após envio de comprovante
+  const receiptStart = localStorage.getItem(KEY_RECEIPT_TIMER);
+  if (receiptStart) {
+    const remainReceipt = MS_AFTER_RECEIPT - (Date.now() - parseInt(receiptStart));
+    if (remainReceipt > 0) {
+      startTimer(Math.min(remainReceipt, remainFA));
+    }
+  }
+
+  // Monitora se o comprovante foi enviado durante esta sessão
   setInterval(() => {
-    let pt = localStorage.getItem(KEY_PT);
-    if (!pt && window._currentPixCode) {
-      pt = Date.now(); localStorage.setItem(KEY_PT, pt);
-      let remainPT = MS_AFTER_PIX; startTimer(remainPT);
+    const rs = localStorage.getItem(KEY_RECEIPT_TIMER);
+    if (rs) {
+      const remainReceipt = MS_AFTER_RECEIPT - (Date.now() - parseInt(rs));
+      if (remainReceipt > 0) {
+        startTimer(Math.min(remainReceipt, MS_FIRST_ACCESS - (Date.now() - parseInt(fa))));
+      }
     }
   }, 2000);
 })();
