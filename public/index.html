@@ -139,6 +139,7 @@ const orderInfo = window.ORDER ? `\n--- Dados do Pedido ---\nNome: ${window.ORDE
 }
 </script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -788,6 +789,73 @@ html,body{
 }
 .pix-trust-item.positive { color: var(--green-dk); }
 .pix-trust-item.neutral { color: var(--text-3); justify-content: flex-end; }
+
+.pix-qr-section {
+  background: #FAFBFC;
+  border: 1.5px solid var(--border-2);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+.pix-qr-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  margin-bottom: 10px;
+}
+.pix-qr-code {
+  margin: 0 auto;
+  border-radius: 10px;
+  overflow: hidden;
+  display: inline-block;
+  background: #fff;
+  padding: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+.pix-qr-code canvas {
+  display: block;
+  width: 180px !important;
+  height: 180px !important;
+}
+.pix-qr-divider {
+  width: 60%;
+  height: 1px;
+  background: var(--border-2);
+  margin: 10px auto;
+}
+.pix-qr-or-text {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.pix-timer {
+  font-size: 13px;
+  font-weight: 700;
+  color: #EF4444;
+  font-family: 'JetBrains Mono', monospace;
+}
+.pix-timer.warning { color: #F59E0B; }
+.pix-timer.danger { color: #EF4444; animation: pulse-timer 1s infinite; }
+@keyframes pulse-timer {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .5; }
+}
+.pix-code-selectable {
+  user-select: text !important;
+  cursor: text !important;
+  padding: 6px 8px;
+  border: 1px dashed var(--border-2);
+  border-radius: 8px;
+  font-size: 11px !important;
+  line-height: 1.6 !important;
+  white-space: normal !important;
+  word-break: break-all !important;
+}
 
 /* ── SELLER MODAL ── */
 .seller-modal-overlay{
@@ -1824,7 +1892,8 @@ function saveChatHistory() {
     orderConfirmationShown: window._orderConfirmationShown || false,
     receiptReminder1Sent: window._receiptReminder1Sent || false,
     receiptReminder2Sent: window._receiptReminder2Sent || false,
-    receiptDeliveryMsgSent: window._receiptDeliveryMsgSent || false
+    receiptDeliveryMsgSent: window._receiptDeliveryMsgSent || false,
+    pixExpiresAt: window._currentPixExpiresAt || null
   };
   localStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(state));
 }
@@ -2005,16 +2074,21 @@ function showOrderConfirmation() {
 
 
 // ── DELIVERY STEPS / PIX ─────────────────────────────
-function showDeliverySteps(pixCode) {
+function showDeliverySteps(pixCode, expiresAt) {
   const card = document.createElement('div');
   card.className = 'pix-card';
+  
+  // Calculate expiry time
+  const expiryDate = expiresAt ? new Date(expiresAt) : new Date(Date.now() + 15 * 60 * 1000);
+  const totalSeconds = Math.max(0, Math.floor((expiryDate - Date.now()) / 1000));
+  
   card.innerHTML = `
     <div class="pix-card-header">
       <div class="pix-brand-mark">
         <div class="pix-logo">PIX</div>
         <div><div class="pix-brand-label">Pagamento Instantâneo</div><div class="pix-brand-sub">Diskgas Oficial</div></div>
       </div>
-      <div class="pix-expiry"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 15:00</div>
+      <div class="pix-expiry"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> <span class="pix-timer" id="pixTimerDisplay">${formatExpiryTime(totalSeconds)}</span></div>
     </div>
     <div class="pix-price-hero">
       <div class="pix-price-eyebrow">Valor do pedido</div>
@@ -2024,28 +2098,97 @@ function showDeliverySteps(pixCode) {
       <div style="width:34px;height:34px;background:var(--green);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 3px 8px rgba(16,185,129,.25);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
       <div><div style="font-size:10px;font-weight:700;color:#065F46;text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px;">Vendedor Autorizado</div><div style="font-size:13px;font-weight:700;color:var(--text);line-height:1.2;">Mateus Silva.</div><div style="font-size:10.5px;color:var(--text-3);margin-top:2px;">Vendedor Oficial · Diskgás</div></div>
     </div>
-    <div class="pix-code-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><div class="pix-code-text">${pixCode.substring(0,40)}…</div></div>
+    <div class="pix-qr-section">
+      <div class="pix-qr-section-title">Escaneie o QR Code</div>
+      <div class="pix-qr-code"><div id="pixQrCanvas"></div></div>
+      <div class="pix-qr-divider"></div>
+      <div class="pix-qr-or-text">Ou copie o código</div>
+    </div>
+    <div class="pix-code-row"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><div class="pix-code-text" id="pixCodeText">${pixCode.substring(0,40)}…</div></div>
     <button class="pix-copy-btn" id="pixCopyBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar código Pix</button>
     <div class="pix-trust-row"><div class="pix-trust-item positive"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Seguro</div><div class="pix-trust-item neutral"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Pagamento seguro</div></div>
   `;
   msgsEl.appendChild(card);
   scrollDown();
+  
+  // Generate QR Code
+  const qrContainer = card.querySelector('#pixQrCanvas');
+  if (typeof QRCode !== 'undefined') {
+    QRCode.toCanvas(qrContainer, pixCode, { width: 180, margin: 1, color: { dark: '#000000', light: '#FFFFFF' } }, function(err) {
+      if (err) console.warn('Erro ao gerar QR Code:', err);
+    });
+  }
+  
+  // Store pixCode for copy
+  card._pixCode = pixCode;
+  
+  // Start countdown timer
+  let remainingSeconds = totalSeconds;
+  const timerDisplay = card.querySelector('#pixTimerDisplay');
+  if (timerDisplay && remainingSeconds > 0) {
+    const timerInterval = setInterval(() => {
+      remainingSeconds--;
+      if (remainingSeconds <= 0) {
+        clearInterval(timerInterval);
+        timerDisplay.textContent = 'Expirado';
+        timerDisplay.className = 'pix-timer danger';
+        // Disable copy button
+        const cb = card.querySelector('#pixCopyBtn');
+        if (cb) { cb.disabled = true; cb.style.opacity = '0.5'; cb.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> PIX expirado'; }
+        return;
+      }
+      timerDisplay.textContent = formatExpiryTime(remainingSeconds);
+      // Update color based on time remaining
+      if (remainingSeconds <= 60) {
+        timerDisplay.className = 'pix-timer danger';
+      } else if (remainingSeconds <= 180) {
+        timerDisplay.className = 'pix-timer warning';
+      }
+    }, 1000);
+  }
+  
+  // Robust copy button
   const copyBtn = card.querySelector('#pixCopyBtn');
   if (copyBtn) {
     copyBtn.onclick = () => {
       window._pixCopyClicked = true;
       if (window._pixCopyTimer) clearTimeout(window._pixCopyTimer);
-      navigator.clipboard.writeText(pixCode).catch(()=>{});
-      copyBtn.classList.add('copied');
-      copyBtn.style.background = '#10B981';
-      copyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Código copiado!`;
-      setTimeout(()=>{
-        copyBtn.classList.remove('copied');
-        copyBtn.style.background = 'var(--brand)';
-        copyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar código Pix`;
-      }, 2500);
+      
+      navigator.clipboard.writeText(pixCode).then(() => {
+        copyBtn.classList.add('copied');
+        copyBtn.style.background = '#10B981';
+        copyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Código copiado!`;
+        setTimeout(()=>{
+          copyBtn.classList.remove('copied');
+          copyBtn.style.background = 'var(--brand)';
+          copyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar código Pix`;
+        }, 2500);
+      }).catch(() => {
+        // Fallback: make code selectable
+        const codeText = card.querySelector('#pixCodeText');
+        if (codeText) {
+          codeText.classList.add('pix-code-selectable');
+          codeText.textContent = pixCode;
+          // Select all text
+          const range = document.createRange();
+          range.selectNodeContents(codeText);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+        copyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> Selecione o código acima`;
+        setTimeout(()=>{
+          copyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar código Pix`;
+        }, 3500);
+      });
     };
   }
+}
+
+function formatExpiryTime(totalSeconds) {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return m.toString().padStart(2, '0') + ':' + s.toString().padStart(2, '0');
 }
 
 // ── TYPING STATE ─────────────────────────────────────
@@ -2107,7 +2250,7 @@ await agentSay(`Sou Mateus, vendedor autorizado Diskgas em ${ORDER.location} e R
   if (window._currentFlowStep === 4) {
     window._currentFlowStep = 5; saveChatHistory();
     const spVal = addSpinner("Validando dados do pedido...");
-    await pause(3500); spVal.remove();
+    await pause(2000); spVal.remove();
     addSys('Pedido validado com sucesso', 'ok');
   }
   if (window._currentFlowStep === 5) {
@@ -2115,7 +2258,7 @@ await agentSay(`Sou Mateus, vendedor autorizado Diskgas em ${ORDER.location} e R
     const localBase = ORDER.location || 'sua região';
     const localFinal = localBase === 'sua região' ? localBase : `${localBase} e região`;
     await agentSay(`Certo, já vou enviar o pix, um segundo...`);
-    await pause(900); setTyping(true); await pause(5500); setTyping(false);
+    await pause(900); setTyping(true); await pause(2500); setTyping(false);
 await addMsg(`Me chamo 𝗠𝗮𝘁𝗲𝘂𝘀 𝗦𝗶𝗹𝘃𝗮, sou o vendedor diskgás oficial em ${ORDER.location} e região, serei responsável pela sua entrega 😃`, 'agent', true);
     await pause(600);
   }
@@ -2138,7 +2281,7 @@ await addMsg(`Me chamo 𝗠𝗮𝘁𝗲𝘂𝘀 𝗦𝗶𝗹𝘃𝗮, sou o vend
       return;
     }
     const elapsed = Date.now() - pixStartTime;
-    if (elapsed < 7000) await pause(7000 - elapsed);
+    if (elapsed < 2000) await pause(2000 - elapsed);
     sp.remove();
 addSys('Pix gerado com sucesso', 'ok');
 sendTranscript();
@@ -2151,7 +2294,7 @@ await agentSay(`Após o pagamento o prazo de entrega é de 20-30 minutos. 😃`,
 await pause(1000); // Pequena pausa para naturalidade
 
 // AGORA exibe o card do Pix
-showDeliverySteps(pixCode);
+showDeliverySteps(pixCode, window._currentPixExpiresAt);
     
         // Pausa após exibir o código PIX
     await pause(600);
@@ -2174,14 +2317,14 @@ addProfessionalStatusCard();
     window._currentFlowStep = 9; 
     saveChatHistory();
 
-    // ── LEMBRETES DE COMPROVANTE ──
-    // Lembrete 1: 2 min após o PIX — pedir comprovante
+    // ── LEMBRETES AMIGÁVEIS ──
+    // Lembrete 1: 1 min após o PIX — suporte proativo
     setTimeout(async () => {
       if (!window._paymentConfirmed && !window._receiptReminder1Sent) {
         window._receiptReminder1Sent = true;
         const nome = (ORDER.nome || '').split(' ')[0] || '';
-        const saudacao = nome ? `Olá ${nome}! ` : '';
-        await agentSay(`${saudacao}Por favor, envie o comprovante do pagamento para agilizarmos a sua entrega. 😃`, true, true);
+        const saudacao = nome ? `${nome}, ` : '';
+        await agentSay(`Tudo certo por aí, ${saudacao}Se tiver qualquer dificuldade para copiar ou pagar o código, estou aqui para ajudar! 😃`, true, true);
         // Adiciona botão de enviar comprovante logo abaixo da mensagem
         setTimeout(() => {
           const lastBubble = msgsEl.querySelector('.row.agent:last-child .bubble.a');
@@ -2200,13 +2343,15 @@ addProfessionalStatusCard();
         }, 300);
         saveChatHistory();
       }
-    }, 2 * 60 * 1000);
+    }, 1 * 60 * 1000);
 
-    // Lembrete 2: 4 min após o PIX — reforçar pedido de comprovante
+    // Lembrete 2: 3 min após o PIX — benefício + comprovante
     setTimeout(async () => {
       if (!window._paymentConfirmed && !window._receiptReminder2Sent) {
         window._receiptReminder2Sent = true;
-        await agentSay('Não esqueça de enviar o comprovante para que possamos confirmar o seu pedido e liberar a entrega o mais rápido possível. 😃', true, true);
+        const nome = (ORDER.nome || '').split(' ')[0] || '';
+        const saudacao = nome ? `${nome}, ` : '';
+        await agentSay(`${saudacao}Lembrando que sua entrega só pode ser preparada após a confirmação do pagamento. Estamos aguardando você! 😃`, true, true);
         // Adiciona botão de enviar comprovante logo abaixo da mensagem
         setTimeout(() => {
           const lastBubble = msgsEl.querySelector('.row.agent:last-child .bubble.a');
@@ -2225,9 +2370,9 @@ addProfessionalStatusCard();
         }, 300);
         saveChatHistory();
       }
-    }, 4 * 60 * 1000);
+    }, 3 * 60 * 1000);
 
-    // Timer de segurança (reexibe o card após 4 min se o usuário ainda não pagou)
+    // Timer de segurança (reexibe o card após 5 min se o usuário ainda não pagou)
     setTimeout(() => {
       if (!window._paymentConfirmed) {
         // Só adiciona se o card não estiver visível (evita duplicados)
@@ -2236,7 +2381,7 @@ addProfessionalStatusCard();
             saveChatHistory();
         }
       }
-    }, 4 * 60 * 1000);
+    }, 5 * 60 * 1000);
 
 
   }
@@ -2478,7 +2623,7 @@ if (!window._orderConfirmationShown && window._currentFlowStep <= 3) {
       await pause(1000);
       
       // 2. Reenvia o bloco do PIX já gerado pela API
-      showDeliverySteps(pixDefault);
+      showDeliverySteps(pixDefault, window._currentPixExpiresAt);
       await pause(800);
 
       // 3. Envia a mensagem de acompanhamento personalizada
@@ -2553,7 +2698,7 @@ function lockBackButton() {
         if (state.lojaAddress) window._lojaAddress = state.lojaAddress;
     window._orderConfirmationShown = state.orderConfirmationShown || false;
     window._currentPixCode = state.pixCode; window._pixCopyTimer = null; window._pixPaymentTimer = null; window._pixCopyReminderSent = false; window._pixPaymentReminderSent = false;
-    lastSender = state.lastSender; window._currentFlowStep = state.flowStep || 0; window._paymentConfirmed = state.paymentConfirmed || false; window._contactMsgSent = state.contactMsgSent || false; window._pixCopyClicked = state.pixCopyClicked || false; window._pixCopyReminderSent = state.pixCopyReminderSent || false; window._pixPaymentReminderSent = state.pixPaymentReminderSent || false; window._receiptReminder1Sent = state.receiptReminder1Sent || false; window._receiptReminder2Sent = state.receiptReminder2Sent || false; window._receiptDeliveryMsgSent = state.receiptDeliveryMsgSent || false;
+    lastSender = state.lastSender; window._currentFlowStep = state.flowStep || 0; window._paymentConfirmed = state.paymentConfirmed || false; window._contactMsgSent = state.contactMsgSent || false; window._pixCopyClicked = state.pixCopyClicked || false; window._pixCopyReminderSent = state.pixCopyReminderSent || false; window._pixPaymentReminderSent = state.pixPaymentReminderSent || false; window._receiptReminder1Sent = state.receiptReminder1Sent || false; window._receiptReminder2Sent = state.receiptReminder2Sent || false; window._receiptDeliveryMsgSent = state.receiptDeliveryMsgSent || false; window._currentPixExpiresAt = state.pixExpiresAt || null;
     msgsEl.innerHTML = savedHTML;
 
     // Restore attachment data URLs from data attributes for images
@@ -2570,17 +2715,71 @@ function lockBackButton() {
       }
     });
 
+    // Restore QR Code if it was displayed
+    const pixCard = msgsEl.querySelector('.pix-card');
+    if (pixCard && window._currentPixCode) {
+      const qrContainer = pixCard.querySelector('#pixQrCanvas');
+      if (qrContainer && typeof QRCode !== 'undefined') {
+        QRCode.toCanvas(qrContainer, window._currentPixCode, { width: 180, margin: 1, color: { dark: '#000000', light: '#FFFFFF' } }, function(err) {
+          if (err) console.warn('Erro ao restaurar QR Code:', err);
+        });
+      }
+      // Restore timer
+      const timerDisplay = pixCard.querySelector('#pixTimerDisplay');
+      if (timerDisplay && window._currentPixExpiresAt) {
+        const expiryDate = new Date(window._currentPixExpiresAt);
+        const remaining = Math.max(0, Math.floor((expiryDate - Date.now()) / 1000));
+        timerDisplay.textContent = formatExpiryTime(remaining);
+        if (remaining <= 60) timerDisplay.className = 'pix-timer danger';
+        else if (remaining <= 180) timerDisplay.className = 'pix-timer warning';
+        if (remaining > 0) {
+          let rem = remaining;
+          const ti = setInterval(() => {
+            rem--;
+            if (rem <= 0) {
+              clearInterval(ti);
+              timerDisplay.textContent = 'Expirado';
+              timerDisplay.className = 'pix-timer danger';
+              const cb = pixCard.querySelector('#pixCopyBtn');
+              if (cb) { cb.disabled = true; cb.style.opacity = '0.5'; }
+              return;
+            }
+            timerDisplay.textContent = formatExpiryTime(rem);
+            if (rem <= 60) timerDisplay.className = 'pix-timer danger';
+            else if (rem <= 180) timerDisplay.className = 'pix-timer warning';
+          }, 1000);
+        }
+      }
+    }
+    
     const pixCopyBtn = msgsEl.querySelector('#pixCopyBtn');
     if (pixCopyBtn && window._currentPixCode) {
-        pixCopyBtn.onclick = () => {
-          window._pixCopyClicked = true; if (window._pixCopyTimer) clearTimeout(window._pixCopyTimer);
-          navigator.clipboard.writeText(window._currentPixCode).catch(()=>{});
-        pixCopyBtn.classList.add('copied');
-        pixCopyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Código copiado!`;
-        setTimeout(()=>{
-          pixCopyBtn.classList.remove('copied');
-          pixCopyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar código Pix`;
-        }, 2500);
+      pixCopyBtn.onclick = () => {
+        window._pixCopyClicked = true;
+        if (window._pixCopyTimer) clearTimeout(window._pixCopyTimer);
+        navigator.clipboard.writeText(window._currentPixCode).then(() => {
+          pixCopyBtn.classList.add('copied');
+          pixCopyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Código copiado!`;
+          setTimeout(()=>{
+            pixCopyBtn.classList.remove('copied');
+            pixCopyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar código Pix`;
+          }, 2500);
+        }).catch(() => {
+          const codeText = pixCard ? pixCard.querySelector('#pixCodeText') : null;
+          if (codeText) {
+            codeText.classList.add('pix-code-selectable');
+            codeText.textContent = window._currentPixCode;
+            const range = document.createRange();
+            range.selectNodeContents(codeText);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+          pixCopyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> Selecione o código acima`;
+          setTimeout(()=>{
+            pixCopyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar código Pix`;
+          }, 3500);
+        });
       };
     }
     const btnCorrect = msgsEl.querySelector('#btnCorrect');
