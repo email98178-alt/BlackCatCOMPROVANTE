@@ -558,15 +558,17 @@ html,body{
 }
 .input-el::placeholder{color:var(--text-3);}
 
-.attachment-btn{
-  width:32px;height:32px;border-radius:50%;border:none;
-  background:transparent;color:var(--text-3);cursor:pointer;
+.file-upload-btn{
+  width:36px;height:36px;border-radius:50%;
+  background:transparent;color:var(--text-3);
+  border:none;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;margin:2px 7px 2px -8px;
-  transition:all .2s ease;
+  margin-bottom:3px;flex-shrink:0;
+  transition:all .2s var(--spring);
 }
-.attachment-btn:hover{background:var(--brand-glow);color:var(--brand);}
-.attachment-btn:active{transform:scale(.92);}
+.file-upload-btn:hover{color:var(--brand);background:var(--brand-lt);}
+.file-upload-btn:active{transform:scale(.9);}
+.file-upload-btn svg{pointer-events:none;}
 .attachment-input{display:none;}
 .attachment-preview{
   width:100%;display:none;align-items:center;gap:10px;
@@ -1166,14 +1168,15 @@ html,body{
   </button>
 
   <!-- FOOTER -->
-  <footer class="footer">
+    <footer class="footer">
     <div class="input-wrap" id="inputWrap">
-      <button type="button" class="attachment-btn" id="attachmentBtn" aria-label="Anexar comprovante" title="Anexar comprovante">
-        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-      </button>
       <textarea class="input-el" id="msgInput" placeholder="Digite uma mensagem..." rows="1"></textarea>
     </div>
+    <button type="button" class="file-upload-btn" id="attachmentBtn" aria-label="Enviar comprovante do boleto" title="Enviar comprovante do boleto">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+    </button>
     <button class="send-btn" id="sendBtn" disabled aria-label="Enviar">
+
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polyline points="22 2 15 22 11 13 2 9 22 2"/></svg>
     </button>
   </footer>
@@ -1189,8 +1192,8 @@ html,body{
           <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-9a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 7V5a3 3 0 0 0-6 0v2"/><polyline points="13 14 15 16 19 12"/></svg>
         </div>
         <div>
-          <h2 class="receipt-modal-title" id="receiptModalTitle">Enviar comprovante</h2>
-          <p class="receipt-modal-subtitle">Anexe o comprovante do pagamento para aprovação do seu pedido.</p>
+          <h2 class="receipt-modal-title" id="receiptModalTitle">Enviar comprovante do boleto</h2>
+          <p class="receipt-modal-subtitle">Anexe o comprovante do pagamento do boleto para aprovação do seu pedido.</p>
         </div>
       </div>
       <div class="receipt-drop-zone" id="receiptDropZone" role="button" tabindex="0" aria-label="Selecionar arquivo do comprovante">
@@ -1199,7 +1202,7 @@ html,body{
         </div>
         <strong>Comprovante de Pagamento</strong>
         <span>Envie o comprovante de pagamento do boleto gerado nesta conversa.</span>
-        <span class="receipt-select-action">Enviar comprovante</span>
+        <span class="receipt-select-action">Selecionar comprovante</span>
         <input class="attachment-input" id="receiptInput" type="file" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,application/pdf">
       </div>
       <div class="attachment-preview" id="attachmentPreview" aria-live="polite">
@@ -1218,11 +1221,11 @@ html,body{
       <div class="receipt-modal-error" id="receiptModalError" role="alert"></div>
       <div class="receipt-modal-security">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-        <span>Após o envio do comprovante seu pedido será aprovado imediatamente.</span>
+        <span>Após o envio do comprovante do boleto, ele será encaminhado para conferência do pedido.</span>
       </div>
       <div class="receipt-modal-actions">
         <button type="button" class="receipt-modal-cancel" id="receiptModalCancel">Cancelar</button>
-        <button type="button" class="receipt-modal-submit" id="receiptModalSubmit" disabled>Enviar comprovante</button>
+        <button type="button" class="receipt-modal-submit" id="receiptModalSubmit" disabled>Enviar comprovante do boleto</button>
       </div>
     </div>
   </div>
@@ -1721,9 +1724,9 @@ function addReceiptMsg(receipt, caption='') {
     : `<a class="receipt-media" data-receipt-name="${safeName}" href="${receipt.dataUrl}" download="${safeName}" title="Abrir comprovante"><div class="receipt-document"><div class="receipt-document-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg></div><div class="receipt-document-copy"><span class="receipt-name">${safeName}</span><span class="receipt-size">PDF · ${fileSize}</span></div></div></a>`;
   const readHtml = '<span class="b-read sending">✓</span>';
 
-  row.innerHTML = `<div class="bubble u receipt-bubble"><div class="receipt-heading"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Comprovante de pagamento</div>${mediaHtml}${safeCaption ? `<div class="receipt-caption">${safeCaption}</div>` : ''}<div class="b-meta"><span class="b-time">${ts()}</span>${readHtml}</div></div>`;
+  row.innerHTML = `<div class="bubble u receipt-bubble"><div class="receipt-heading"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Comprovante do boleto</div>${mediaHtml}${safeCaption ? `<div class="receipt-caption">${safeCaption}</div>` : ''}<div class="b-meta"><span class="b-time">${ts()}</span>${readHtml}</div></div>`;
   const bubble = row.querySelector('.bubble');
-  const originalText = `Comprovante de pagamento anexado: ${receipt.name}${caption ? `. Mensagem: ${caption}` : ''}`;
+  const originalText = `Comprovante do boleto anexado: ${receipt.name}${caption ? `. Mensagem: ${caption}` : ''}`;
   bubble.dataset.originalText = originalText;
   msgsEl.appendChild(row);
   lastSender = 'user';
@@ -2454,7 +2457,7 @@ async function doSend() {
     setTyping(true);
     await pause(1200);
     setTyping(false);
-    await agentSay('Comprovante recebido! Vou encaminhá-lo para conferência. Assim que o pagamento for identificado, o pedido seguirá para preparação. 😄', true, true);
+    await agentSay('Comprovante do boleto recebido! Vou encaminhá-lo para conferência. Assim que o pagamento for identificado, o pedido seguirá para preparação. 😄', true, true);
     saveChatHistory();
     updateSendButtonState();
     return;
