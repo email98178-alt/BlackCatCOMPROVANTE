@@ -38,6 +38,7 @@ const FALLBACK_SHIPPING = {
 };
 
 app.use(express.json({ limit: '100kb' }));
+app.use(express.static(path.join(__dirname, 'dist')));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── MULTER: UPLOAD DE COMPROVANTES ──
@@ -486,9 +487,9 @@ io.on('connection', socket => {
   });
 });
 
-app.get("/",(req,res)=>{res.sendFile(path.join(__dirname,"index.html"));});
+app.get("/", (req, res) => { res.sendFile(path.join(__dirname, "dist", "index.html")); });
 
-app.get("/admin",(req,res)=>{res.sendFile(path.join(__dirname,"admin.html"));});
+app.get("/admin", (req, res) => { res.sendFile(path.join(__dirname, "dist", "admin.html")); });
 
 // Catch-all para servir index.html para qualquer outra rota não definida
 app.get("/*",(req,res)=>{res.sendFile(path.join(__dirname,"index.html"));});
